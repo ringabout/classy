@@ -1,4 +1,4 @@
-import macros, future, intsets
+import macros, intsets, sugar
 from sequtils import apply, map, zip, toSeq, applyIt, allIt, mapIt
 
 ## Classy
@@ -66,7 +66,7 @@ type
     ## a type constructor).
     ## Doesn't have to evaluate to concrete type after parameter substitution -
     ## must be eliminated after typeclass instantiation.
-    ident: NimIdent
+    ident: NimNode
     arity: Natural
       ## types with arity of zero are considered concrete, with corresponding
       ## matching rules
@@ -174,11 +174,11 @@ proc asTree(p: AbstractPattern): NimNode {.compileTime.} =
   ##
   ## Only useful for error messages - use fields for matching.
   if p.arity == 0:
-    result = newIdentNode(p.ident)
+    result = p.ident
   else:
     result = newTree(
       nnkBracketExpr,
-      newIdentNode(p.ident)
+      p.ident
     )
     for i in 1..p.arity:
       result.add(newIdentNode("_"))
@@ -306,11 +306,11 @@ proc parseAbstractPattern(
 
   if tree.kind == nnkBracketExpr:
     AbstractPattern(
-      ident: tree[0].ident,
+      ident: tree[0],
       arity: tree.len - 1
     )
   else:
-    AbstractPattern(ident: tree.ident, arity: 0)
+    AbstractPattern(ident: tree, arity: 0)
 
 proc parseAbstractPatterns(
   tree: NimNode
@@ -365,7 +365,7 @@ proc genSymParams(
     def.expectKind(nnkIdentDefs)
     let id = def[0]
     id.expectKind({nnkIdent, nnkSym})
-    let newId = genIdent($id.ident & "_")
+    let newId = genIdent(id.strVal & "_")
     result.params[i][0] = newId
 
     substitutions.add((id, newId))
